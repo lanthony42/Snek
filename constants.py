@@ -6,31 +6,38 @@ TEXT = (5, 5)
 FPS = 60
 
 BASE_SIZE = 10
+EYE_SIZE = 4
+PUPIL_SIZE = EYE_SIZE - 2
 BASE_SPEED = 2
 MIN_DISTANCE = 1
 MAX_DISTANCE = MIN_DISTANCE + 3
 SIZE_INC = 15
+EYE_INC = SIZE_INC * 4
+PUPIL_INC = SIZE_INC * 8
 GROWTH_INC = SIZE_INC * 20
 
 BOOST_MIN = 10
 BOOST_FACTOR = 2
 BOOST_DCR = 5
 ENEMIES = 5
-AI_RADIUS = 100
+AI_RADIUS = 150
+BOOST_RADIUS = 100
 
 FOOD_RADIUS = 5
 DEAD_FOOD_RADIUS = FOOD_RADIUS + 1
-FOOD_INIT = 200
+FOOD_INIT = 150
 FOOD_DEATH = 4
 FOOD_COLOUR = (240, 40, 40)
 
 BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
+FADED = (60, 60, 160)
 GREEN = (30, 180, 30)
 RED = (240, 0, 0)
 PURPLE = (160, 30, 160)
 YELLOW = (215, 215, 70)
 TAN = (215, 125, 70)
+WHITE = (220, 220, 220)
 
 ENEMY_COLOURS = [RED, GREEN, PURPLE, YELLOW, TAN]
 BOOST_OFFSET = 40
@@ -47,7 +54,7 @@ class Vector:
         return Vector(vector[0], vector[1])
 
     def tuple(self):
-        return self.x, self.y
+        return round(self.x), round(self.y)
 
     def copy(self):
         return Vector(self.x, self.y)
@@ -115,6 +122,9 @@ class Vector:
             self.y /= mag
         else:
             return self
+
+    def perpendicular(self, first=True):
+        return Vector(-self.y if first else self.y, self.x if first else -self.x).normalized()
 
     def lerp(self, target, distance, gap=0):
         direction = target - self

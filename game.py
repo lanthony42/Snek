@@ -15,18 +15,7 @@ class Game:
         pygame.display.set_caption('Slither.jar')
         self.font = pygame.font.SysFont('arial', 24)
 
-        self.snakes = [Snake()]
-        self.food = [new_food()]
-        self.state = 'start'
-        self.score = 0
-
-        for _ in range(FOOD_INIT):
-            self.food.append(new_food())
-        for _ in range(ENEMIES):
-            self.snakes.append(self.new_enemy())
-
-    def init_game(self):
-        self.snakes = [Snake()]
+        self.snakes = []
         self.food = [new_food()]
         self.state = 'start'
         self.score = 0
@@ -38,14 +27,13 @@ class Game:
 
     @property
     def snake(self):
-        return self.snakes[0]
+        return None if self.state == 'start' else self.snakes[0]
 
     def run(self):
         while True:
             self.handle_input()
 
-            if self.state == 'play' or self.state == 'end':
-                self.update()
+            self.update()
             self.render()
 
             pygame.display.update()
@@ -53,9 +41,23 @@ class Game:
 
     def update(self):
         for snake in self.snakes:
-            if snake.state != 'dead':
+            if snake and snake.state != 'dead':
                 self.ai(snake)
                 snake.move()
+
+                for enemy in self.snakes:
+                    if snake is not self.snake and enemy is self.snake:
+                        if BOOST_RADIUS ** 2 > (enemy.position - snake.position).mag_squared():
+                            snake.boost()
+                    if snake is not enemy and enemy.state != 'dead' and snake.collide_snake(enemy, snake is self.snake):
+                        snake.die(self.food)
+                        if snake is self.snake:
+                            self.state = 'end'
+                        else:
+                            self.snakes.append(self.new_enemy())
+                        break
+                if snake.state == 'dead':
+                    continue
 
                 for food in self.food:
                     if snake.collide_circle(food):
@@ -68,15 +70,7 @@ class Game:
                             self.food.append(new_food())
                         break
 
-                for enemy in self.snakes:
-                    if snake is not enemy and enemy.state != 'dead' and snake.collide_snake(enemy, snake is self.snake):
-                        snake.die(self.food)
-                        if snake is self.snake:
-                            self.state = 'end'
-                        else:
-                            self.snakes.append(self.new_enemy())
-
-        self.snakes = [snake for snake in self.snakes if snake.body]
+        self.snakes = [snake for snake in self.snakes if snake.state != 'dead' or snake is self.snake]
 
     def render(self):
         self.screen.fill(BLACK)
@@ -88,25 +82,28 @@ class Game:
         if self.state == 'play':
             self.screen.blit(self.font.render(f'Score: {self.score}', 1, GREEN), TEXT)
         elif self.state == 'start':
+            pygame.draw.circle(self.screen, FADED, (pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]), BASE_SIZE)
             self.screen.blit(self.font.render('Press Any Key to Start...', 1, GREEN), TEXT)
         elif self.state == 'end':
-            self.screen.blit(self.font.render('You Failed lol...', 1, GREEN), TEXT)
+            self.screen.blit(self.font.render('You Failed lol...', 1, WHITE), TEXT)
 
     def handle_input(self):
         for event in pygame.event.get():
             if event.type == KEYDOWN or event.type == MOUSEBUTTONUP:
                 if self.state == 'start':
+                    self.snakes.insert(0, Snake(Vector.t(pygame.mouse.get_pos())))
                     self.state = 'play'
                 elif self.state == 'end':
-                    self.init_game()
+                    self.state = 'start'
             elif event.type == QUIT:
                 pygame.display.quit()
                 pygame.quit()
                 sys.exit()
 
-        if pygame.mouse.get_pressed()[0]:
-            self.snake.boost()
-        self.snake.target = Vector.t(pygame.mouse.get_pos())
+        if self.snake:
+            if pygame.mouse.get_pressed()[0]:
+                self.snake.boost()
+            self.snake.target = Vector.t(pygame.mouse.get_pos())
 
     def ai(self, snake):
         if snake is not self.snake and snake.position == snake.target:
